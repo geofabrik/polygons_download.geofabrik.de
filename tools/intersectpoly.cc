@@ -28,12 +28,14 @@
 #include <geos/geom/CoordinateSequence.h>
 #include <geos/geom/CoordinateSequenceFactory.h>
 #include <geos/geom/GeometryFactory.h>
+#include <geos/io/WKTWriter.h>
 
 using namespace geos::geom;
 using namespace std;
 
 GeometryFactory *gfactory;
 int count = 1;
+geos::io::WKTWriter wrt;
 
 MultiPolygon* readpoly()
 {
@@ -41,6 +43,9 @@ MultiPolygon* readpoly()
     char buffer[256];
     vector<Coordinate> *coords = new vector<Coordinate>();
     vector<Geometry *> polys;
+    LinearRing *outer = NULL;
+    vector<Geometry*> *inner = new vector<Geometry *>;
+    bool hole = false;
 
     while (fgets(buffer, sizeof(buffer), stdin))
     {
@@ -57,26 +62,53 @@ MultiPolygon* readpoly()
             end++;
             CoordinateSequence *cs = gfactory->getCoordinateSequenceFactory()->create(coords);
             LinearRing *lr = gfactory->createLinearRing(cs);
-            Polygon *p = gfactory->createPolygon(lr, NULL);
-            polys.push_back(p);
+            if (!hole)
+            {
+                outer = lr;
+            } 
+            else
+            {
+                inner->push_back(lr);
+            }
             coords = new vector<Coordinate>();
+            hole = false;
         }
         else
         {
             end = 0;
+            hole = (buffer[0] == '!');
+            if (!hole && outer != NULL)
+            {
+                Polygon *p = gfactory->createPolygon(outer, inner);
+                polys.push_back(p);
+                outer = NULL;
+                inner = new vector<Geometry *>;
+            }
         }
     }
     delete coords;
+    if (outer)
+    {
+       Polygon *p = gfactory->createPolygon(outer, inner);
+       polys.push_back(p);
+    }
     return gfactory->createMultiPolygon(polys);
 }
 
 void writepoly(const Geometry *p)
 {
-    printf("%d\n", count++);
-    CoordinateSequence *cs = p->getCoordinates();
-    for (int i=0; i<cs->getSize(); i++)
+    const Polygon *pp = dynamic_cast<const Polygon *>(p);
+    int numir = pp->getNumInteriorRing(); 
+    for (int i=-1; i<numir; i++)
     {
-        printf("   %10E   %10E\n", cs->getAt(i).x, cs->getAt(i).y);
+        printf("%s%d\n", (i==-1) ? "" : "!", count++);
+        const LineString *ls = (i== -1) ? pp->getExteriorRing() : pp->getInteriorRingN(i);
+        CoordinateSequence *cs = ls->getCoordinates();
+        for (int j=0; j<cs->getSize(); j++)
+        {
+            printf("   %10E   %10E\n", cs->getAt(j).x, cs->getAt(j).y);
+        }
+        printf("END\n");
     }
     printf("END\n");
 }
@@ -99,6 +131,5 @@ int main(int argc, char **argv)
             writepoly(intersect->getGeometryN(i));
         }
     }
-    printf("END\n");
 }
 

@@ -1,2 +1,2 @@
 intersectpoly: intersectpoly.cc
-	g++ -o intersectpoly intersectpoly.cc  -lgeos 
+	g++ -g -o intersectpoly intersectpoly.cc  -lgeos 
