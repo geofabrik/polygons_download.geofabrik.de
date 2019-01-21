@@ -110,7 +110,6 @@ void writepoly(const Geometry *p)
         }
         printf("END\n");
     }
-    printf("END\n");
 }
 
 int main(int argc, char **argv)
@@ -131,5 +130,6 @@ int main(int argc, char **argv)
             writepoly(intersect->getGeometryN(i));
         }
     }
+    printf("END\n");
 }
 
