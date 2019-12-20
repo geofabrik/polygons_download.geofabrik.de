@@ -33,7 +33,7 @@
 using namespace geos::geom;
 using namespace std;
 
-GeometryFactory *gfactory;
+GeometryFactory::unique_ptr gfactory;
 int count = 1;
 geos::io::WKTWriter wrt;
 
@@ -114,7 +114,7 @@ void writepoly(const Geometry *p)
 
 int main(int argc, char **argv)
 {
-    gfactory = new GeometryFactory();
+    gfactory = GeometryFactory::create();
     MultiPolygon *p1 = readpoly();
     MultiPolygon *p2 = readpoly();
     Geometry *intersect = p1->intersection(p2);
