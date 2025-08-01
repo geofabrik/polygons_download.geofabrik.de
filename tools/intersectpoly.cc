@@ -30,21 +30,18 @@
 #include <geos/geom/GeometryFactory.h>
 #include <geos/io/WKTWriter.h>
 
-using namespace geos::geom;
-using namespace std;
-
-const GeometryFactory* gfactory;;
+const geos::geom::GeometryFactory* gfactory;;
 int poly_count = 1;
 geos::io::WKTWriter wrt;
 
-unique_ptr<MultiPolygon> readpoly()
+std::unique_ptr<geos::geom::MultiPolygon> readpoly()
 {
     int end = 0;
     char buffer[256];
-    vector<Coordinate> *coords = new vector<Coordinate>();
-    vector<unique_ptr<Polygon>> polys;
-    unique_ptr<LinearRing> outer;
-    vector<unique_ptr<LinearRing>> inner;
+    std::vector<geos::geom::Coordinate> *coords = new std::vector<geos::geom::Coordinate>();
+    std::vector<std::unique_ptr<geos::geom::Polygon>> polys;
+    std::unique_ptr<geos::geom::LinearRing> outer;
+    std::vector<std::unique_ptr<geos::geom::LinearRing>> inner;
     bool hole = false;
 
     while (fgets(buffer, sizeof(buffer), stdin))
@@ -54,14 +51,14 @@ unique_ptr<MultiPolygon> readpoly()
             end = 0;
             char *first = strpbrk(buffer, "0123456789.-");
             char *second = strpbrk(first+1, " \t");
-            coords->push_back(Coordinate(atof(first), atof(second)));
+            coords->push_back(geos::geom::Coordinate(atof(first), atof(second)));
         }
         else if (!strncmp(buffer, "END", 3))
         {
             if (end) break;
             end++;
-            unique_ptr<CoordinateSequence> cs = gfactory->getCoordinateSequenceFactory()->create(coords);
-            unique_ptr<LinearRing> lr = gfactory->createLinearRing(std::move(cs));
+            std::unique_ptr<geos::geom::CoordinateSequence> cs = gfactory->getCoordinateSequenceFactory()->create(coords);
+            std::unique_ptr<geos::geom::LinearRing> lr = gfactory->createLinearRing(std::move(cs));
             if (!hole)
             {
                 outer = move(lr);
@@ -70,7 +67,7 @@ unique_ptr<MultiPolygon> readpoly()
             {
                 inner.push_back(move(lr));
             }
-            coords = new vector<Coordinate>();
+            coords = new std::vector<geos::geom::Coordinate>();
             hole = false;
         }
         else
@@ -79,31 +76,31 @@ unique_ptr<MultiPolygon> readpoly()
             hole = (buffer[0] == '!');
             if (!hole && outer != NULL)
             {
-                unique_ptr<Polygon> p = gfactory->createPolygon(move(outer), move(inner));
+                std::unique_ptr<geos::geom::Polygon> p = gfactory->createPolygon(move(outer), move(inner));
                 polys.push_back(move(p));
                 outer = NULL;
-                inner = std::vector<unique_ptr<LinearRing>>();
+                inner = std::vector<std::unique_ptr<geos::geom::LinearRing>>();
             }
         }
     }
     delete coords;
     if (outer)
     {
-       std::unique_ptr<Polygon> p = gfactory->createPolygon(move(outer), move(inner));
+       std::unique_ptr<geos::geom::Polygon> p = gfactory->createPolygon(move(outer), move(inner));
        polys.push_back(move(p));
     }
     return gfactory->createMultiPolygon(move(polys));
 }
 
-void writepoly(const Geometry* p)
+void writepoly(const geos::geom::Geometry* p)
 {
-    const Polygon *pp = dynamic_cast<const Polygon *>(p);
+    const geos::geom::Polygon *pp = dynamic_cast<const geos::geom::Polygon *>(p);
     int numir = pp->getNumInteriorRing(); 
     for (int i=-1; i<numir; i++)
     {
         printf("%s%d\n", (i==-1) ? "" : "!", poly_count++);
-        const LineString *ls = (i== -1) ? pp->getExteriorRing() : pp->getInteriorRingN(i);
-        unique_ptr<CoordinateSequence> cs = ls->getCoordinates();
+        const geos::geom::LineString *ls = (i== -1) ? pp->getExteriorRing() : pp->getInteriorRingN(i);
+        std::unique_ptr<geos::geom::CoordinateSequence> cs = ls->getCoordinates();
         for (size_t j=0; j<cs->getSize(); j++)
         {
             printf("   %10E   %10E\n", cs->getAt(j).x, cs->getAt(j).y);
@@ -114,16 +111,16 @@ void writepoly(const Geometry* p)
 
 int main(int argc, char **argv)
 {
-    gfactory = GeometryFactory::getDefaultInstance();
-    unique_ptr<MultiPolygon> p1 = readpoly();
-    unique_ptr<MultiPolygon> p2 = readpoly();
-    unique_ptr<Geometry> intersect = p1->intersection(p2.get());
+    gfactory = geos::geom::GeometryFactory::getDefaultInstance();
+    std::unique_ptr<geos::geom::MultiPolygon> p1 = readpoly();
+    std::unique_ptr<geos::geom::MultiPolygon> p2 = readpoly();
+    std::unique_ptr<geos::geom::Geometry> intersect = p1->intersection(p2.get());
     printf("none\n");
-    if (intersect->getGeometryTypeId() == GEOS_POLYGON)
+    if (intersect->getGeometryTypeId() == geos::geom::GEOS_POLYGON)
     {
         writepoly(intersect.get());
     }
-    else if (intersect->getGeometryTypeId() == GEOS_MULTIPOLYGON)
+    else if (intersect->getGeometryTypeId() == geos::geom::GEOS_MULTIPOLYGON)
     {
         for (size_t i=0; i< intersect->getNumGeometries(); i++)
         {
