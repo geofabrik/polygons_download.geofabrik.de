@@ -2,14 +2,7 @@
  * This little program computes the intersection between two .poly files,
  * read on stdin, and writes a new .poly file on stdout.
  * 
- * usage:
- * cat p1.poly p2.poly ./intersectpoly > px.poly
- *
- * It can handle multipolygons but not holes; strange input data will
- * yield unpredictable results (segfaults, most likely). Feel free to 
- * add appropriate error checking.
- *
- * compile with:
+ * Compile with:
  * c++ -o intersectpoly intersectpoly.cc
  *
  * Written by Frederik Ramm <frederik@remote.org>, public domain.
@@ -36,6 +29,19 @@ using bpolygon_t = bgeom::model::polygon<bpoint_t>;
 using bmulti_polygon_t = bgeom::model::multi_polygon<bpolygon_t>;
 
 int poly_count = 1;
+
+void print_help()
+{
+    fprintf(stderr, "%s",
+        "This program computes the intersection between two .poly files,\n" \
+        "read on stdin, and writes a new .poly file on stdout.\n" \
+        "Usage:\n" \
+        "  cat p1.poly p2.poly | ./intersectpoly > px.poly\n" \
+        "It can handle multipolygons but not holes; strange input data will\n" \
+        "yield unpredictable results (segfaults, most likely). Feel free to\n" \
+        "add appropriate error checking.\n"
+        );
+}
 
 bmulti_polygon_t readpoly()
 {
@@ -117,8 +123,13 @@ void writepoly(const bpolygon_t& p)
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char **)
 {
+    if (argc > 1)
+    {
+        print_help();
+        exit(1);
+    }
     bmulti_polygon_t p1 = readpoly();
     bgeom::correct(p1);
     bmulti_polygon_t p2 = readpoly();
