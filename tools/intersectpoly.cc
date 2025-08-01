@@ -10,7 +10,7 @@
  * add appropriate error checking.
  *
  * compile with:
- * c++ -o intersectpoly intersectpoly.cc -lgeos
+ * c++ -o intersectpoly intersectpoly.cc
  *
  * Written by Frederik Ramm <frederik@remote.org>, public domain.
  */
@@ -20,27 +20,31 @@
 #include <stdlib.h>
 #include <vector>
 
-#include <geos/geom/LinearRing.h>
-#include <geos/geom/Polygon.h>
-#include <geos/geom/MultiPolygon.h>
-#include <geos/geom/Coordinate.h>
-#include <geos/geom/CoordinateSequence.h>
-#include <geos/geom/CoordinateSequenceFactory.h>
-#include <geos/geom/GeometryFactory.h>
-#include <geos/io/WKTWriter.h>
+#include <boost/geometry/algorithms/append.hpp>
+#include <boost/geometry/algorithms/correct.hpp>
+#include <boost/geometry/algorithms/intersection.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/linestring.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/geometries/multi_polygon.hpp>
 
-const geos::geom::GeometryFactory* gfactory;;
+namespace bgeom = boost::geometry;
+using geometry_numeric_type = double;
+using bpoint_t = bgeom::model::d2::point_xy<geometry_numeric_type>;
+using bring_t = bgeom::model::ring<bpoint_t>;
+using bpolygon_t = bgeom::model::polygon<bpoint_t>;
+using bmulti_polygon_t = bgeom::model::multi_polygon<bpolygon_t>;
+
 int poly_count = 1;
-geos::io::WKTWriter wrt;
 
-std::unique_ptr<geos::geom::MultiPolygon> readpoly()
+bmulti_polygon_t readpoly()
 {
     int end = 0;
     char buffer[256];
-    std::vector<geos::geom::Coordinate> *coords = new std::vector<geos::geom::Coordinate>();
-    std::vector<std::unique_ptr<geos::geom::Polygon>> polys;
-    std::unique_ptr<geos::geom::LinearRing> outer;
-    std::vector<std::unique_ptr<geos::geom::LinearRing>> inner;
+    bring_t coords;
+    bmulti_polygon_t polys;
+    bring_t outer;
+    std::vector<bring_t> inners;
     bool hole = false;
 
     while (fgets(buffer, sizeof(buffer), stdin))
@@ -50,81 +54,80 @@ std::unique_ptr<geos::geom::MultiPolygon> readpoly()
             end = 0;
             char *first = strpbrk(buffer, "0123456789.-");
             char *second = strpbrk(first+1, " \t");
-            coords->push_back(geos::geom::Coordinate(atof(first), atof(second)));
+            bgeom::append(coords, bpoint_t(atof(first), atof(second)));
         }
         else if (!strncmp(buffer, "END", 3))
         {
             if (end) break;
             end++;
-            std::unique_ptr<geos::geom::CoordinateSequence> cs = gfactory->getCoordinateSequenceFactory()->create(coords);
-            std::unique_ptr<geos::geom::LinearRing> lr = gfactory->createLinearRing(std::move(cs));
             if (!hole)
             {
-                outer = move(lr);
+                outer = std::move(coords);
             } 
             else
             {
-                inner.push_back(move(lr));
+
+                inners.push_back(std::move(coords));
             }
-            coords = new std::vector<geos::geom::Coordinate>();
+            coords = bring_t{};
             hole = false;
         }
         else
         {
             end = 0;
             hole = (buffer[0] == '!');
-            if (!hole && outer != NULL)
+            if (!hole && !outer.empty())
             {
-                std::unique_ptr<geos::geom::Polygon> p = gfactory->createPolygon(move(outer), move(inner));
-                polys.push_back(move(p));
-                outer = NULL;
-                inner = std::vector<std::unique_ptr<geos::geom::LinearRing>>();
+                bpolygon_t p;
+                p.outer() = std::move(outer);
+                p.inners() = std::move(inners);
+                polys.push_back(std::move(p));
+                outer = bring_t{};
+                inners = std::vector<bring_t>{};
             }
         }
     }
-    delete coords;
-    if (outer)
+    if (outer.size() > 3)
     {
-       std::unique_ptr<geos::geom::Polygon> p = gfactory->createPolygon(move(outer), move(inner));
-       polys.push_back(move(p));
+        bpolygon_t p;
+        p.outer() = std::move(outer);
+        p.inners() = std::move(inners);
+        polys.push_back(std::move(p));
     }
-    return gfactory->createMultiPolygon(move(polys));
+    return polys;
 }
 
-void writepoly(const geos::geom::Geometry* p)
+void print_points(const bring_t& ring)
 {
-    const geos::geom::Polygon *pp = dynamic_cast<const geos::geom::Polygon *>(p);
-    int numir = pp->getNumInteriorRing(); 
-    for (int i=-1; i<numir; i++)
+    for (const auto& p : ring)
     {
-        printf("%s%d\n", (i==-1) ? "" : "!", poly_count++);
-        const geos::geom::LineString *ls = (i== -1) ? pp->getExteriorRing() : pp->getInteriorRingN(i);
-        std::unique_ptr<geos::geom::CoordinateSequence> cs = ls->getCoordinates();
-        for (size_t j=0; j<cs->getSize(); j++)
-        {
-            printf("   %10E   %10E\n", cs->getAt(j).x, cs->getAt(j).y);
-        }
-        printf("END\n");
+        printf("   %10E   %10E\n", bgeom::get<0>(p), bgeom::get<1>(p));
+    }
+    printf("END\n");
+}
+
+void writepoly(const bpolygon_t& p)
+{
+    printf("%d\n", poly_count++);
+    print_points(p.outer());
+    for (const auto& inner : p.inners())
+    {
+        printf("!%d\n", poly_count++);
+        print_points(inner);
     }
 }
 
 int main(int argc, char **argv)
 {
-    gfactory = geos::geom::GeometryFactory::getDefaultInstance();
-    std::unique_ptr<geos::geom::MultiPolygon> p1 = readpoly();
-    std::unique_ptr<geos::geom::MultiPolygon> p2 = readpoly();
-    std::unique_ptr<geos::geom::Geometry> intersect = p1->intersection(p2.get());
+    bmulti_polygon_t p1 = readpoly();
+    bgeom::correct(p1);
+    bmulti_polygon_t p2 = readpoly();
+    bgeom::correct(p2);
+    bmulti_polygon_t result;
+    bgeom::intersection(p1, p2, result);
     printf("none\n");
-    if (intersect->getGeometryTypeId() == geos::geom::GEOS_POLYGON)
-    {
-        writepoly(intersect.get());
-    }
-    else if (intersect->getGeometryTypeId() == geos::geom::GEOS_MULTIPOLYGON)
-    {
-        for (size_t i=0; i< intersect->getNumGeometries(); i++)
-        {
-            writepoly(intersect->getGeometryN(i));
-        }
+    for (const auto& p : result) {
+        writepoly(p);
     }
     printf("END\n");
 }

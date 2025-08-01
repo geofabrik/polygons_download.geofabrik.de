@@ -1,2 +1,5 @@
 intersectpoly: intersectpoly.cc
-	g++ -std=c++11 -O3 -Wall -Wpedantic -fstack-protector-all -g -o $@ $^ -lgeos
+	g++ -std=c++17 -O3 -Wall -Wextra -pedantic -Wredundant-decls -Wdisabled-optimization -Wctor-dtor-privacy -Wnon-virtual-dtor -Woverloaded-virtual -Wsign-promo -Wold-style-cast -g -o $@ $^
+
+clean:
+	rm intersectpoly
