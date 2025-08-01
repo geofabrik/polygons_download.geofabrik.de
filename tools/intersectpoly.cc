@@ -21,7 +21,6 @@
 #include <vector>
 
 #include <geos/geom/LinearRing.h>
-#include <geos/geom/LinearRing.h>
 #include <geos/geom/Polygon.h>
 #include <geos/geom/MultiPolygon.h>
 #include <geos/geom/Coordinate.h>
