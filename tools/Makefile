@@ -1,2 +1,2 @@
 intersectpoly: intersectpoly.cc
-	g++ -g -o intersectpoly intersectpoly.cc  -lgeos 
+	g++ -std=c++11 -O3 -Wall -Wpedantic -fstack-protector-all -g -o $@ $^ -lgeos
