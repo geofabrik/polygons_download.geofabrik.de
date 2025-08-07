@@ -3,7 +3,7 @@
 We welcome contributions to our clipping polygon set and we endeavour to 
 deploy corrections on our download server in a timely fashion.
 
-We cannot, however, honor requests for arbirtrary additional extracts.
+We cannot, however, honor requests for arbitrary additional extracts.
 We will create additional extracts once a country or region file has
 reached a certain size limit; other than that, special extracts - whether
 they be smaller extracts or combinations of regions - can only be offered
