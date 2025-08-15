@@ -25,13 +25,17 @@ file, then the countries are cut from the continents, and so on.
 
 Therefore, the clipping process does not have to know about boundaries where
 they coincide with a higher level boundary. For example, because the
-Southern border of Mexico coincides with the border of what we call 
-"North America", and because Mexico is cut from the "North America" file,
+Southern border of Texas coincides with the border of the USA,
+and because Texas is cut from the USA file,
 this particular boundary only requires precise modelling in the 
-"North America" polygon. In the "Mexico" polygon you will find that this
-border coarsely extends into the US landmass, but this does not have an 
-effect on the acutal Mexico extract which is, along this border, linited
-by the "North America" polygon.
+USA polygon. In the Texas polygon, only those parts of the boundary
+that are inside the USA are modelled precisely, whereas the Southern
+border coarsely extends into Mexico - it doesn't matter since there 
+will not be any data in that area when Texas is cut from the USA file.
+
+![Image showing Texas and USA clipping boundaries](texas.png)
+
+*Texas (bold red line) and USA (thin red line) clipping boundaries.*
 
 There is a tool in this repository called [intersectpoly](tools/intersectpoly.cc) and we use this to create the smallest common area of several polygons, 
 so that the polygons (or GeoJSON index files) we offer on the download
@@ -44,6 +48,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for buffer sizes, degree of simplificatio
 
 ## License
 
-Polygons are a produced work as in terms of Open Database License 1.0. By using them, you are required to attribute OpenStreetMap contributors.
+Polygons are an OpenStreetMap produced work in terms of the Open Database License 1.0. When using them, you are required to attribute OpenStreetMap.
 
 Software is released into the public domain.
